@@ -9,9 +9,10 @@ const app = express();
 app.use(express.json());
 
 app.get("/", async (req, res) => {
-  res.json({ message: "Hello World" });
+  res.json({ message: "Server is ok" });
 });
 
+// create a user
 app.post("/users", async (req, res) => {
   const { name, phone, age, gender, fatherId, mother, siblingsIds } = req.body;
   try {
@@ -66,6 +67,7 @@ app.post("/users", async (req, res) => {
   }
 });
 
+// get all users
 app.get("/users", async (req, res) => {
   const users = await prisma.user.findMany({
     select: {
@@ -132,6 +134,87 @@ app.get("/users", async (req, res) => {
     };
   });
   res.json(mergedUsers);
+});
+
+// get user by id
+app.get("/users/:id", async (req, res) => {
+  const userId = parseInt(req.params.id);
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        phone: true,
+        gender: true,
+        mother: true,
+        children: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            phone: true,
+            gender: true,
+          },
+        },
+        father: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            phone: true,
+          },
+        },
+        siblings: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            phone: true,
+            gender: true,
+          },
+        },
+        siblingOf: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            phone: true,
+            gender: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Merge siblings and siblingOf
+    const allSiblings = [...user.siblings, ...user.siblingOf];
+    const uniqueSiblings = Array.from(
+      new Map(allSiblings.map((s) => [s.id, s])).values()
+    );
+
+    const userData = {
+      id: user.id,
+      name: user.name,
+      age: user.age,
+      phone: user.phone,
+      gender: user.gender,
+      mother: user.mother,
+      father: user.father,
+      siblings: uniqueSiblings,
+      children: user.children,
+    };
+
+    res.json(userData);
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 app.listen(3000, () => {
