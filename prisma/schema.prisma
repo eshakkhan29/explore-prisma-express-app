@@ -7,8 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
+
 model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+  id        Int     @id @default(autoincrement())
+  name      String
+  phone     String  @unique
+  age       Int
+  gender    Gender
+
+  // Parent relationships
+  fatherId  Int?
+  father    User?   @relation("FatherRelation", fields: [fatherId], references: [id])
+
+  motherId  Int?
+  mother    User?   @relation("MotherRelation", fields: [motherId], references: [id])
+
+  // Children relationships (these users consider this user their father or mother)
+  childrenAsFather User[] @relation("FatherRelation")
+  childrenAsMother User[] @relation("MotherRelation")
+
+  // Sibling relationship (many-to-many)
+  siblings       User[] @relation("SiblingRelation")
+  siblingOf      User[] @relation("SiblingRelation")
 }
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+
+
