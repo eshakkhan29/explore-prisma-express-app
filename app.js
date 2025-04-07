@@ -13,8 +13,7 @@ app.get("/", async (req, res) => {
 });
 
 app.post("/users", async (req, res) => {
-  const { name, phone, age, gender, fatherId, motherId, siblingsIds } =
-    req.body;
+  const { name, phone, age, gender, fatherId, mother, siblingsIds } = req.body;
   try {
     // Check if the phone number already exists
     const existingUser = await prisma.user.findUnique({
@@ -35,28 +34,33 @@ app.post("/users", async (req, res) => {
         phone: phone,
         age: age,
         gender: gender,
+        mother: mother,
         father: {
           connect: { id: fatherId },
         },
-        mother: {
-          connect: { id: motherId },
-        },
         siblings: {
-          connect: siblingsIds?.map((id) => ({ id: id })) || [],
+          connect: siblingsIds?.map((sibId) => ({ id: sibId })) || [],
         },
       },
     });
 
     const user = await prisma.user.findUnique({
       where: { id: newUser.id },
-      include: {
-        father: true,
+      select: {
+        id: true,
+        name: true,
+        age: true,
         mother: true,
+        father: true,
         siblings: true,
+        fatherId: false,
       },
     });
 
-    res.json(user);
+    res.status(200).json({
+      message: "user created",
+      user: user,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -69,15 +73,18 @@ app.get("/users", async (req, res) => {
       name: true,
       age: true,
       phone: true,
-      father: {
+      gender: true,
+      mother: true,
+      children: {
         select: {
           id: true,
           name: true,
           age: true,
           phone: true,
+          gender: true,
         },
       },
-      mother: {
+      father: {
         select: {
           id: true,
           name: true,
@@ -91,11 +98,40 @@ app.get("/users", async (req, res) => {
           name: true,
           age: true,
           phone: true,
+          gender: true,
+        },
+      },
+      siblingOf: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          phone: true,
+          gender: true,
         },
       },
     },
   });
-  res.json(users);
+
+  const mergedUsers = users.map((user) => {
+    // Combine and remove duplicates by `id`
+    const allSiblings = [...user.siblings, ...user.siblingOf];
+    const uniqueSiblings = Array.from(
+      new Map(allSiblings.map((s) => [s.id, s])).values()
+    );
+
+    return {
+      id: user.id,
+      name: user.name,
+      age: user.age,
+      gender: user.gender,
+      mother: user.mother,
+      father: user.father,
+      children: user.children,
+      siblings: uniqueSiblings,
+    };
+  });
+  res.json(mergedUsers);
 });
 
 app.listen(3000, () => {

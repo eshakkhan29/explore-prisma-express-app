@@ -10,22 +10,20 @@ datasource db {
 
 
 model User {
-  id        Int     @id @default(autoincrement())
+  id        Int     @id @default(autoincrement()) @unique
   name      String
   phone     String  @unique
   age       Int
   gender    Gender
+  mother    String
 
   // Parent relationships
   fatherId  Int?
   father    User?   @relation("FatherRelation", fields: [fatherId], references: [id])
 
-  motherId  Int?
-  mother    User?   @relation("MotherRelation", fields: [motherId], references: [id])
 
   // Children relationships (these users consider this user their father or mother)
-  childrenAsFather User[] @relation("FatherRelation")
-  childrenAsMother User[] @relation("MotherRelation")
+  children User[] @relation("FatherRelation")
 
   // Sibling relationship (many-to-many)
   siblings       User[] @relation("SiblingRelation")
