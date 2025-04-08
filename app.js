@@ -1,12 +1,14 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const dotenv = require("dotenv");
+const cors = require("cors");
 
 dotenv.config();
 const prisma = new PrismaClient();
 const app = express();
 
 app.use(express.json());
+app.use(cors());
 
 app.get("/", async (req, res) => {
   res.json({ message: "Server is ok" });
@@ -215,6 +217,29 @@ app.get("/users/:id", async (req, res) => {
     console.error("Error fetching user:", error);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+app.get("/users-tree", async (req, res) => {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      age: true,
+      phone: true,
+      gender: true,
+      fatherId: true,
+      children: {
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          phone: true,
+          gender: true,
+        },
+      },
+    },
+  });
+  res.status(200).json(users);
 });
 
 app.listen(3000, () => {
